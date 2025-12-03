@@ -13,120 +13,108 @@ const levels = [
     id: 1,
     name: "Level 1: The Edge Mistake",
     setup: () => {
-      // Computer 'O' on side edge (row 1, col 2 -> index 0, 1)
+      // Computer 'O' on side edge
       board[0][1] = 'O';
-      computerDifficulty = 1;
+      computerDifficulty = 1; // Uses "Passive" AI
       updateBoard();
     },
     checkMove: (row, col) => {
       // Goal: Place X at Center (2, 2 -> index 1, 1)
       if (row === 1 && col === 1) {
-        return { success: true, message: "Great job! Taking the center prevents them from dominating." };
+        return { success: true, message: "Great job! You took the center." };
       } else {
-        return { success: false, message: "You played on the edge, which let the AI create a fork! Try the center next time." };
+        return { success: false, message: "You played on the edge! The center was open." };
       }
     },
-    teachingPoint: "The center is the most valuable real estate! If they give it up, take it.",
+    teachingPoint: "The center is key. If they miss it, take it!",
     hint: "Use `place_x_at(2, 2)`."
   },
   {
     id: 2,
     name: "Level 2: The Center Challenge",
     setup: () => {
-      // Computer 'O' in Center (row 2, col 2 -> index 1, 1)
+      // Computer 'O' in Center
       board[1][1] = 'O';
-      computerDifficulty = 1;
+      computerDifficulty = 1; // Uses "Passive" AI
       updateBoard();
     },
     checkMove: (row, col) => {
       // Goal: Place X in any Corner
-      // Corners: (0,0), (0,2), (2,0), (2,2)
       if ((row === 0 && col === 0) || (row === 0 && col === 2) || (row === 2 && col === 0) || (row === 2 && col === 2)) {
-        return { success: true, message: "Smart move! Corners are your safety net." };
+        return { success: true, message: "Smart move! Corners are safe." };
       } else {
-        return { success: false, message: "Don't play on the edges when the center is taken, or you'll get trapped!" };
+        return { success: false, message: "Edges are dangerous when the center is taken!" };
       }
     },
-    teachingPoint: "If the center is gone, corners are your safety net. Don't play on the edges, or you'll get trapped!",
-    hint: "Try `place_x_at(1, 1)` or another corner."
+    teachingPoint: "If the center is gone, grab a corner.",
+    hint: "Try `place_x_at(1, 1)` or (3, 3)."
   },
   {
     id: 3,
     name: "Level 3: The Corner Trap",
     setup: () => {
-      // Computer 'O' in a Corner (e.g., 1, 1 -> index 0, 0)
+      // Computer 'O' in a Corner
       board[0][0] = 'O';
-      computerDifficulty = 1;
+      computerDifficulty = 1; // Uses "Passive" AI
       updateBoard();
     },
     checkMove: (row, col) => {
-      // Goal: Check if Center is empty. If it is, take it!
+      // Goal: Check Center.
       if (row === 1 && col === 1) {
-        return { success: true, message: "Perfect! Always check the board state before moving." };
+        return { success: true, message: "Perfect! You checked and took the center." };
       } else {
-        // If center was empty and they didn't take it
-        return { success: false, message: "The center was open! You should have taken it." };
+        return { success: false, message: "Always check the center first!" };
       }
     },
-    teachingPoint: "Always check the board state before moving. Use `is_square_empty`.",
-    hint: "Use an `if` block with `is_square_empty(2, 2)`."
+    teachingPoint: "Check the board state. If center is empty, take it.",
+    hint: "Use `if` with `is_square_empty(2, 2)`."
   },
   {
     id: 4,
-    name: "Level 4: The Thinking Machine",
+    name: "Level 4: Survival Mode",
     setup: () => {
-      // Difficulty 3. Computer goes first.
-      computerDifficulty = 3;
-      // Computer moves first is handled by restartGame logic
+      computerDifficulty = 3; // Semi-Smart
     },
     checkGameEnd: (winner) => {
-      if (winner === 'X') {
-         return { success: true, message: "You outsmarted the machine! Well done." };
+      if (winner === 'X' || winner === 'Tie') {
+         return { success: true, message: "You survived! Well done." };
       } else {
-         return { success: false, message: "The machine beat you or you blocked too late. Try to prioritize winning, then blocking." };
+         return { success: false, message: "You lost. Prioritize blocking!" };
       }
     },
-    teachingPoint: "Priority Logic: Win > Block > Center > Random.",
-    hint: "Look for a winning move first. If no win is available, block the opponent."
+    teachingPoint: "Win > Block > Random.",
+    hint: "Check for winning moves, then blocking moves."
   },
   {
     id: 5,
     name: "Level 5: The Grandmaster",
     setup: () => {
-      // Difficulty 5 (Optimal).
-      computerDifficulty = 5;
+      computerDifficulty = 5; // Impossible
     },
     checkGameEnd: (winner) => {
       if (winner === 'Tie') {
-        return { success: true, message: "Incredible! You forced a draw against a perfect opponent. You are a Grandmaster!" };
-      } else if (winner === 'X') {
-         // Should be impossible against Minimax
-         return { success: true, message: "Impossible! You beat the Grandmaster?" };
+        return { success: true, message: "Incredible! You forced a draw." };
       } else {
-         return { success: false, message: "The Grandmaster wins. Perfect play results in a draw. Try again to survive." };
+         return { success: false, message: "Perfect play requires a draw. Try again." };
       }
     },
-    teachingPoint: "Perfect play against a perfect opponent results in a draw. Prove your code is perfect by not losing.",
-    hint: "Your goal is to survive. Don't make any mistakes."
+    teachingPoint: "Optimal play leads to a Tie.",
+    hint: "Don't make mistakes."
   }
 ];
 
 function start() {
-    // Create main workspace.
     workspace = Blockly.inject('blocklyDiv', {
         toolbox: document.getElementById('toolbox-categories'),
     });
-    // Initialize Level 1
     loadLevel(1);
 }
 
 function loadLevel(levelId) {
     currentLevel = levelId;
     const level = levels[levelId - 1];
-
     document.getElementById('levelDisplay').innerText = level.name;
     updateJulesMessage(level.teachingPoint);
-
     restartGame();
 }
 
@@ -136,7 +124,7 @@ function updateJulesMessage(msg) {
 
 function restartGame() {
     board = [['', '', ''], ['', '', ''], ['', '', '']];
-    currentPlayer = 'X'; // Will be switched if Computer goes first
+    currentPlayer = 'X'; 
     gameOver = false;
     gameStated = false;
     updateBoard();
@@ -147,10 +135,6 @@ function restartGame() {
         level.setup();
     }
 
-    // Computer goes first in Level 4 and 5 (and implicity in 1-3 via setup)
-    // Actually, in Level 1-3 setup puts a piece. That counts as computer move.
-    // So it's X's turn.
-    // In Level 4 & 5, setup just sets difficulty. We need to trigger computer move.
     if (currentLevel >= 4) {
        currentPlayer = 'O';
        document.getElementById('status').innerText = "Computer's turn (O)";
@@ -175,32 +159,12 @@ function runCode() {
 }
 
 function setDifficulty(diff) {
-    // User code shouldn't override level difficulty, but block allows it.
-    // Maybe we ignore it or allow experimentation?
-    // Let's allow it but warn or just let it be.
-    // The prompt implies `set_difficulty` block is available to user.
-    // "The user has access to these specific blocks: ... set_difficulty(level)"
-    // But the Level 5 Setup says "The Computer plays with Difficulty 5".
-    // If user sets it to 1, they cheat.
-    // But maybe that's part of the game?
-    // "The Task: ... Write code that forces a Tie."
-    // If they set difficulty to 1, they can win easily, but not force a tie against optimal.
-    // I'll stick to the level setup overriding it if possible, or reset it in restartGame.
-    // But if they put `set_difficulty(1)` in their code, it runs.
     computerDifficulty = parseInt(diff);
 }
 
 function placeRandomX() {
   if (gameOver) return;
-  let emptySquares = [];
-  for (let r = 0; r < 3; r++) {
-    for (let c = 0; c < 3; c++) {
-      if (board[r][c] === '') {
-        emptySquares.push({r, c});
-      }
-    }
-  }
-  
+  let emptySquares = getEmptySquares();
   if (emptySquares.length > 0) {
     let move = emptySquares[Math.floor(Math.random() * emptySquares.length)];
     placeX(move.r + 1, move.c + 1); 
@@ -217,28 +181,15 @@ function placeX(row, col) {
 
         const level = levels[currentLevel - 1];
 
-        // Check Move for Levels 1-3
+        // LOGIC CHECK FOR LEVELS 1-3
         if (currentLevel <= 3 && level.checkMove) {
             const result = level.checkMove(row, col);
-            if (result.success) {
-                document.getElementById('status').innerText = "Level Complete!";
-                updateJulesMessage(result.message);
-                gameOver = true;
-                setTimeout(() => {
-                    if (currentLevel < 5) {
-                        if (confirm(result.message + "\n\nProceed to next level?")) {
-                            loadLevel(currentLevel + 1);
-                        }
-                    } else {
-                        alert("Congratulations! You completed the curriculum!");
-                    }
-                }, 500);
-                return; // Stop game
-            } else {
+            if (!result.success) {
                  updateJulesMessage(result.message + " " + (level.hint || ""));
-                 // Don't stop game immediately? Or do?
-                 // Usually simpler to stop and ask to retry.
-                 // But maybe they want to see why they lose.
+                 // We let the game continue even on bad move, or we could stop?
+                 // Let's let it continue but warn them.
+            } else {
+                 updateJulesMessage(result.message);
             }
         }
 
@@ -253,7 +204,6 @@ function placeX(row, col) {
         } else {
             currentPlayer = 'O';
             document.getElementById('status').innerText = "Computer's turn (O)";
-            // Small delay for computer move to look natural
             setTimeout(computerMove, 500);
         }
     } else {
@@ -263,59 +213,55 @@ function placeX(row, col) {
 
 function checkGameEnd(winner) {
     const level = levels[currentLevel - 1];
-    if (level.checkGameEnd) {
+    let success = false;
+    
+    // Levels 1-3: Must Win
+    if (currentLevel <= 3) {
+        if (winner === 'X') success = true;
+    } 
+    // Levels 4-5: Custom Logic
+    else if (level.checkGameEnd) {
         const result = level.checkGameEnd(winner);
+        success = result.success;
         updateJulesMessage(result.message);
-        if (result.success) {
-             setTimeout(() => {
-                if (currentLevel < 5) {
-                    if (confirm(result.message + "\n\nProceed to next level?")) {
-                        loadLevel(currentLevel + 1);
-                    }
-                } else {
-                     alert("You are a Grandmaster! Curriculum Complete.");
-                }
-            }, 500);
-        } else {
-            // Failure
-        }
     }
-}
 
-function isSquareEmpty(row, col) {
-    row -= 1;
-    col -= 1;
-    return row >= 0 && row < 3 && col >= 0 && col < 3 && board[row][col] === '';
+    if (success) {
+         setTimeout(() => {
+            if (currentLevel < 5) {
+                if (confirm("Level Complete! Proceed to Level " + (currentLevel + 1) + "?")) {
+                    loadLevel(currentLevel + 1);
+                }
+            } else {
+                 alert("You are a Grandmaster! Curriculum Complete.");
+            }
+        }, 500);
+    } else if (currentLevel <= 3 && winner !== 'X') {
+        updateJulesMessage("Level Failed. You must WIN this level. Restarting...");
+        setTimeout(() => loadLevel(currentLevel), 1500);
+    }
 }
 
 function computerMove() {
   if (gameOver) return;
 
-  // Calculate probability of playing optimally
-  let optimalChance = (computerDifficulty - 1) * 0.25;
-  let shouldPlayOptimally = Math.random() < optimalChance;
-
   let move = null;
 
-  if (shouldPlayOptimally) {
-    move = getBestMove();
-  }
-
-  // Fallback to random if not playing optimally OR if optimal failed (shouldn't happen unless full)
-  if (!move) {
-    let emptySquares = [];
-    for (let r = 0; r < 3; r++) {
-      for (let c = 0; c < 3; c++) {
-        if (board[r][c] === '') {
-          emptySquares.push({r, c});
-        }
+  // STRATEGY SELECTION
+  if (currentLevel <= 3) {
+      // PASSIVE AI: Intentionally plays badly to allow forks/wins
+      move = getWorstMove();
+  } else {
+      // COMPETITIVE AI: Levels 4 & 5
+      let optimalChance = (computerDifficulty - 1) * 0.25; 
+      if (Math.random() < optimalChance) {
+        move = getBestMove(); // Minimax
+      } else {
+        move = getRandomMove();
       }
-    }
-    if (emptySquares.length > 0) {
-      move = emptySquares[Math.floor(Math.random() * emptySquares.length)];
-    }
   }
 
+  // Execute Move
   if (move) {
     board[move.r][move.c] = 'O';
     updateBoard();
@@ -334,19 +280,65 @@ function computerMove() {
   }
 }
 
-// NEW: Minimax Algorithm helper functions
+// --- AI HELPERS ---
+
+function getEmptySquares() {
+  let empty = [];
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      if (board[r][c] === '') empty.push({r, c});
+    }
+  }
+  return empty;
+}
+
+function getRandomMove() {
+    let empty = getEmptySquares();
+    if (empty.length > 0) return empty[Math.floor(Math.random() * empty.length)];
+    return null;
+}
+
+// PASSIVE AI (Ensures user can win/fork)
+function getWorstMove() {
+    let empty = getEmptySquares();
+    if (empty.length === 0) return null;
+
+    // Filter out moves that would BLOCK the player (we WANT the player to win)
+    let safeMoves = empty.filter(m => {
+        // Does playing here stop X from winning?
+        board[m.r][m.c] = 'X'; 
+        let blocksWin = checkWin('X');
+        board[m.r][m.c] = ''; // Undo
+        return !blocksWin;
+    });
+
+    // Filter out moves that would make Computer WIN (we don't want to win)
+    let badMoves = (safeMoves.length > 0 ? safeMoves : empty).filter(m => {
+        board[m.r][m.c] = 'O';
+        let winsGame = checkWin('O');
+        board[m.r][m.c] = '';
+        return !winsGame;
+    });
+
+    // If we have moves that don't block and don't win, pick one.
+    if (badMoves.length > 0) {
+        return badMoves[Math.floor(Math.random() * badMoves.length)];
+    }
+    
+    // Fallback: Just random
+    return empty[Math.floor(Math.random() * empty.length)];
+}
+
+// MINIMAX (Unbeatable)
 function getBestMove() {
   let bestScore = -Infinity;
   let move = null;
-  // If first move for computer and board is empty, pick corner or center to save time?
-  // Minimax on 3x3 is fast enough.
-
   for (let r = 0; r < 3; r++) {
     for (let c = 0; c < 3; c++) {
       if (board[r][c] === '') {
         board[r][c] = 'O';
         let score = minimax(board, 0, false);
-        board[r][c] = ''; // Undo move
+        board[r][c] = ''; 
         if (score > bestScore) {
           bestScore = score;
           move = { r, c };
@@ -392,7 +384,6 @@ function minimax(board, depth, isMaximizing) {
 }
 
 function checkWin(player) {
-    // Check rows, columns, and diagonals
     for (let i = 0; i < 3; i++) {
         if (board[i][0] === player && board[i][1] === player && board[i][2] === player) return true;
         if (board[0][i] === player && board[1][i] === player && board[2][i] === player) return true;
@@ -405,12 +396,15 @@ function checkWin(player) {
 function isBoardFull() {
     for (let r = 0; r < 3; r++) {
         for (let c = 0; c < 3; c++) {
-            if (board[r][c] === '') {
-                return false;
-            }
+            if (board[r][c] === '') return false;
         }
     }
     return true;
+}
+
+function isSquareEmpty(row, col) {
+    row -= 1; col -= 1;
+    return row >= 0 && row < 3 && col >= 0 && col < 3 && board[row][col] === '';
 }
 
 function updateBoard() {
