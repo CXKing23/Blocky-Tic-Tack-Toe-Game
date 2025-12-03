@@ -71,13 +71,30 @@ Blockly.defineBlocksWithJsonArray([
       "colour": 230,
       "tooltip": "Sets how smart the computer opponent is.",
       "helpUrl": ""
+    },
+    {
+      "type": "has_player_moved",
+      "message0": "has player moved?",
+      "output": "Boolean",
+      "colour": 230,
+      "tooltip": "Returns true if the player has successfully made a move this turn.",
+      "helpUrl": ""
+    },
+    {
+      "type": "end_turn",
+      "message0": "end turn",
+      "previousStatement": null,
+      "nextStatement": null,
+      "colour": 230,
+      "tooltip": "Signals the end of your turn and lets the computer move.",
+      "helpUrl": ""
     }
   ]);
 
   javascript.javascriptGenerator.forBlock['place_x_at'] = function(block) {
     var row = javascript.javascriptGenerator.valueToCode(block, 'ROW', javascript.javascriptGenerator.ORDER_ATOMIC);
     var col = javascript.javascriptGenerator.valueToCode(block, 'COL', javascript.javascriptGenerator.ORDER_ATOMIC);
-    var code = 'placeX(' + row + ', ' + col + ');\n';
+    var code = 'await placeX(' + row + ', ' + col + ');\n';
     return code;
   };
 
@@ -89,12 +106,20 @@ Blockly.defineBlocksWithJsonArray([
   };
   
   javascript.javascriptGenerator.forBlock['place_x_random'] = function(block) {
-    return 'placeRandomX();\n';
+    return 'await placeRandomX();\n';
   };
 
   javascript.javascriptGenerator.forBlock['set_difficulty'] = function(block) {
     var difficulty = block.getFieldValue('DIFFICULTY');
     return 'setDifficulty(' + difficulty + ');\n';
+  };
+
+  javascript.javascriptGenerator.forBlock['has_player_moved'] = function(block) {
+    return ['hasPlayerMoved()', javascript.javascriptGenerator.ORDER_FUNCTION_CALL];
+  };
+
+  javascript.javascriptGenerator.forBlock['end_turn'] = function(block) {
+    return 'await endTurn();\n';
   };
 
 
