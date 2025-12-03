@@ -71,6 +71,14 @@ Blockly.defineBlocksWithJsonArray([
       "colour": 230,
       "tooltip": "Sets how smart the computer opponent is.",
       "helpUrl": ""
+    },
+    {
+      "type": "has_player_moved",
+      "message0": "has player moved?",
+      "output": "Boolean",
+      "colour": 230,
+      "tooltip": "Returns true if the player has successfully made a move this turn.",
+      "helpUrl": ""
     }
   ]);
 
@@ -95,6 +103,10 @@ Blockly.defineBlocksWithJsonArray([
   javascript.javascriptGenerator.forBlock['set_difficulty'] = function(block) {
     var difficulty = block.getFieldValue('DIFFICULTY');
     return 'setDifficulty(' + difficulty + ');\n';
+  };
+
+  javascript.javascriptGenerator.forBlock['has_player_moved'] = function(block) {
+    return ['hasPlayerMoved()', javascript.javascriptGenerator.ORDER_FUNCTION_CALL];
   };
 
 
