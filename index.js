@@ -1,9 +1,12 @@
 'use strict';
 let workspace = null;
-let board = [['', '', ''], ['', '', ''], ['', '', '']];
+let boards = []; // Array of 4 boards: each is 3x3
+let currentBoardIndex = 0; // Index of the board currently being operated on by user logic
 let currentPlayer = 'X';
-let gameOver = false;
-let gameStated = false;
+let gameStated = false; // "Stated" meant "Started" probably. Renaming to avoid confusion? No, sticking to existing var.
+// Actually, with multi-board async logic, we need to track execution state.
+let isExecuting = false;
+
 let computerDifficulty = 1;
 
 let currentLevel = 1;
@@ -15,10 +18,17 @@ const levels = [
     id: 1,
     name: "Level 1: The Center Strike",
     setup: () => {
-      // Computer 'O' on side edge (row 1, col 2 -> index 0, 1)
-      board[0][1] = 'O';
-      computerDifficulty = 1; // Passive/Random
-      updateBoard();
+      // 4 boards, different edge taken
+      // Board 0: Top Edge (0, 1)
+      boards[0][0][1] = 'O';
+      // Board 1: Right Edge (1, 2)
+      boards[1][1][2] = 'O';
+      // Board 2: Bottom Edge (2, 1)
+      boards[2][2][1] = 'O';
+      // Board 3: Left Edge (1, 0)
+      boards[3][1][0] = 'O';
+
+      computerDifficulty = 1;
     },
     checkMove: (row, col) => {
       // Goal: Place X at Center (2, 2 -> index 1, 1)
@@ -29,6 +39,8 @@ const levels = [
       }
     },
     checkGameEnd: (winner) => {
+      // Win on all boards?
+      // Logic for game end checks aggregation of all boards elsewhere.
       if (winner === 'X') {
          return { success: true, message: "Flawless victory! You dominated the center and cleaned up the rest. Your logic is solid." };
       } else {
@@ -46,14 +58,13 @@ const levels = [
     id: 2,
     name: "Level 2: The Corner Defense",
     setup: () => {
-      // Computer 'O' in Center (row 2, col 2 -> index 1, 1)
-      board[1][1] = 'O';
-      computerDifficulty = 1; // Passive/Random
-      updateBoard();
+      // Computer 'O' in Center on all boards
+      for(let i=0; i<4; i++) {
+        boards[i][1][1] = 'O';
+      }
+      computerDifficulty = 1;
     },
     checkMove: (row, col) => {
-      // Goal: Place X in any Corner
-      // Corners: (0,0), (0,2), (2,0), (2,2)
       if ((row === 0 && col === 0) || (row === 0 && col === 2) || (row === 2 && col === 0) || (row === 2 && col === 2)) {
         return { success: false, message: "Good defense! You secured a corner. Now, the hard part begins: Maneuver your way to a WIN." };
       } else {
@@ -78,14 +89,19 @@ const levels = [
     id: 3,
     name: "Level 3: The Trap Check",
     setup: () => {
-      // Computer 'O' in a Corner (e.g., 1, 1 -> index 0, 0)
-      board[0][0] = 'O';
-      computerDifficulty = 1; // Passive/Random
-      updateBoard();
+      // Computer 'O' in a Corner (mirrored)
+      // B0: Top-Left
+      boards[0][0][0] = 'O';
+      // B1: Top-Right
+      boards[1][0][2] = 'O';
+      // B2: Bottom-Right
+      boards[2][2][2] = 'O';
+      // B3: Bottom-Left
+      boards[3][2][0] = 'O';
+
+      computerDifficulty = 1;
     },
     checkMove: (row, col) => {
-      // Goal: Check if Center is empty. If it is, take it!
-      // Since O is in corner, Center IS empty. So taking it is the only correct move for this lesson.
       if (row === 1 && col === 1) {
         return { success: false, message: "Gotcha! You caught them leaving the center open. Now, finish the job. WIN the game." };
       } else {
@@ -110,7 +126,6 @@ const levels = [
     id: 4,
     name: "Level 4: Survival Mode",
     setup: () => {
-      // Difficulty 3. Computer goes first.
       computerDifficulty = 3;
     },
     checkGameEnd: (winner) => {
@@ -132,7 +147,6 @@ const levels = [
     id: 5,
     name: "Level 5: The Grandmaster",
     setup: () => {
-      // Difficulty 5 (Optimal).
       computerDifficulty = 5;
     },
     checkGameEnd: (winner) => {
@@ -158,25 +172,45 @@ function start() {
     workspace = Blockly.inject('blocklyDiv', {
         toolbox: document.getElementById('toolbox-categories'),
     });
-
-    // Register callbacks
     workspace.registerToolboxCategoryCallback('HINTS', hintsCallback);
     workspace.registerToolboxCategoryCallback('SECRETS', secretsCallback);
+
+    // Initialize DOM for 4 boards
+    initBoardsDOM();
 
     // Initialize Level 1
     loadLevel(1);
 }
 
+function initBoardsDOM() {
+    const container = document.getElementById('boardsContainer');
+    container.innerHTML = '';
+    for(let i=0; i<4; i++) {
+        const boardDiv = document.createElement('div');
+        boardDiv.id = `board${i}`;
+        boardDiv.className = 'board';
+        // Cells
+        for(let r=1; r<=3; r++) {
+            for(let c=1; c<=3; c++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.dataset.row = r;
+                cell.dataset.col = c;
+                boardDiv.appendChild(cell);
+            }
+        }
+        container.appendChild(boardDiv);
+    }
+}
+
 function hintsCallback(workspace) {
   const level = levels[currentLevel - 1];
   const xmlList = [];
-
   if (level && level.hints) {
     level.hints.forEach(hint => {
        const label = document.createElement('label');
        label.setAttribute('text', hint.text);
        xmlList.push(label);
-       // Add a separator
        const sep = document.createElement('sep');
        sep.setAttribute('gap', '10');
        xmlList.push(sep);
@@ -192,9 +226,6 @@ function secretsCallback(workspace) {
     const label = document.createElement('label');
     label.setAttribute('text', "Solution for Level " + currentLevel + ":");
     xmlList.push(label);
-
-    // Add solution as text or pre-made block (simulated as text label for now as code block generation is complex dynamically)
-    // Or we can just put a label with the strategy explanation.
     if (level && level.solution) {
         const solLabel = document.createElement('label');
         solLabel.setAttribute('text', level.solution);
@@ -205,22 +236,18 @@ function secretsCallback(workspace) {
         xmlList.push(solLabel);
     }
   } else {
-    // Locked
     const label = document.createElement('label');
     label.setAttribute('text', "There is a Secrets tab... but it’s locked.");
     xmlList.push(label);
-
     const label2 = document.createElement('label');
     label2.setAttribute('text', "You’ll need the password.");
     xmlList.push(label2);
-
     setTimeout(() => {
         if (!secretsUnlocked) {
              const password = prompt("Enter password to unlock secrets:");
              if (password === "password") {
                  secretsUnlocked = true;
                  alert("Secrets unlocked! Click the category again.");
-                 // Refresh toolbox?
                  workspace.refreshToolboxSelection();
              }
         }
@@ -232,10 +259,8 @@ function secretsCallback(workspace) {
 function loadLevel(levelId) {
     currentLevel = levelId;
     const level = levels[levelId - 1];
-
     document.getElementById('levelDisplay').innerText = level.name;
     updateJulesMessage(level.teachingPoint);
-
     restartGame();
 }
 
@@ -248,11 +273,17 @@ function hasPlayerMoved() {
 }
 
 function restartGame() {
-    board = [['', '', ''], ['', '', ''], ['', '', '']];
-    currentPlayer = 'X'; // Will be switched if Computer goes first
-    gameOver = false;
+    // Reset all 4 boards
+    boards = [];
+    for(let i=0; i<4; i++) {
+        boards.push([['', '', ''], ['', '', ''], ['', '', '']]);
+    }
+
+    currentPlayer = 'X';
     gameStated = false;
-    playerMoved = false; // Reset move tracking
+    isExecuting = false;
+    playerMoved = false;
+
     updateBoard();
     document.getElementById('status').innerText = "Your turn (X)";
 
@@ -260,89 +291,269 @@ function restartGame() {
     if (level.setup) {
         level.setup();
     }
+    updateBoard(); // Update UI after setup changes
 
-    // Computer goes first in Level 4 and 5
-    // In Level 1-3, setup puts a piece, effectively acting as first move.
+    // Check if Computer goes first (Level 4 & 5)
+    // Note: In Multi-Board, if computer goes first, it goes on ALL boards.
+    // However, restartGame puts pieces in setup.
+    // For L4/L5, setup sets difficulty.
+    // We need to trigger computer move on all boards.
     if (currentLevel >= 4) {
        currentPlayer = 'O';
        document.getElementById('status').innerText = "Computer's turn (O)";
-       computerMove();
+       // We can't use `computerMove` directly because it expects to be called within execution context or handled specially.
+       // But `computerMove` is now async and per-board?
+       // Let's make a function to handle computer turn on all boards.
+       executeComputerTurnAllBoards();
     }
 }
 
+async function executeComputerTurnAllBoards() {
+    // Execute concurrently or sequentially? Sequentially for visual clarity.
+    for(let i=0; i<4; i++) {
+        currentBoardIndex = i;
+        if (!isBoardGameOver(i)) {
+            await computerMove();
+        }
+    }
+    currentPlayer = 'X';
+    document.getElementById('status').innerText = "Your turn (X)";
+}
+
 function runCode() {
-    if (gameOver) return;
-    if (gameStated) return;
-    gameStated = true;
+    // If not "Continue", restart first.
+    // Actually, button says "Run/Restart".
+    // If user wants to just Run on fresh state, they click Run.
+    restartGame();
+    // Then execute.
+    // Wait, restartGame is sync, but if Computer goes first, executeComputerTurnAllBoards is async?
+    // If L4/L5, we need to wait for computer?
+    // But `runCode` is user action.
+    // If `currentLevel >= 4`, restartGame triggers computer move.
+    // We should wait for that?
+    // Actually, `runCode` executes USER code.
+    // If it's O's turn, User code shouldn't run?
+    // In L4/L5, O goes first. Then X.
+    // So `runCode` should be allowed ONLY if it's X's turn?
+    // Or `runCode` starts the "Game Loop"?
+    // In Blockly games, usually "Run" executes the User's logic for the current state.
+
+    // Let's assume `executeUserLogic` handles the flow.
+    executeUserLogic();
+}
+
+function continueGame() {
+    // Don't restart. Just run user logic on current state.
+    executeUserLogic();
+}
+
+async function executeUserLogic() {
+    if (isExecuting) return;
+    isExecuting = true;
+
+    // Reset Infinite Loop Trap
     window.LoopTrap = 1000;
     javascript.javascriptGenerator.INFINITE_LOOP_TRAP =
         'if (--window.LoopTrap == 0) throw "Infinite loop.";\n';
     var code = javascript.javascriptGenerator.workspaceToCode(workspace);
     javascript.javascriptGenerator.INFINITE_LOOP_TRAP = null;
+
+    // Wrap code in async function
+    // We need to iterate over all 4 boards.
+    // The user code is written as if for one board.
+    // We run it 4 times.
+
+    // Note: If user code loops forever (Level 5), we need to be careful.
+    // But Level 5 code `repeat until has player moved` is a loop.
+    // The generated code must handle `hasPlayerMoved` correctly.
+
     try {
-        eval(code);
+        for(let i=0; i<4; i++) {
+            currentBoardIndex = i;
+            playerMoved = false; // Reset for this board's turn
+
+            // Skip if board is game over
+            if (isBoardGameOver(i)) continue;
+
+            // Execute User Code
+            // We use a Function constructor to create an async function
+            // We need to pass `placeX` etc into scope? No, they are global.
+            const userAsyncFunc = new Function('return (async () => { ' + code + ' })()');
+            await userAsyncFunc();
+
+            // Check checks for this board
+            const level = levels[currentLevel - 1];
+            // We do checking inside placeX mostly.
+        }
+
+        // After user moves on all boards, check global win/loss?
+        // Or trigger computer turn?
+
+        // If game is not over, Computer moves.
+        // Wait, did user move?
+        // If user didn't move (e.g. empty code), we shouldn't trigger computer?
+        // But "Continue" allows adding blocks.
+
+        // Let's trigger Computer Move on all boards where X moved or it's O's turn.
+        // Actually, turn structure:
+        // X moves on valid boards.
+        // Then O moves on valid boards.
+        // Then pause.
+
+        currentPlayer = 'O';
+        document.getElementById('status').innerText = "Computer's turn (O)";
+        await executeComputerTurnAllBoards();
+
+        // Check Global Game End (Simul Logic)
+        checkSimulStatus();
+
     } catch (e) {
+        console.error(e);
         alert(e);
+    } finally {
+        isExecuting = false;
     }
+}
+
+function checkSimulStatus() {
+    // Check if ALL boards are finished.
+    let allFinished = true;
+    let wins = 0;
+    let ties = 0;
+    let losses = 0;
+
+    for(let i=0; i<4; i++) {
+        const status = getBoardStatus(i);
+        if (status === 'active') allFinished = false;
+        if (status === 'X') wins++;
+        if (status === 'Tie') ties++;
+        if (status === 'O') losses++;
+    }
+
+    if (allFinished) {
+        // Evaluate Success based on Level
+        const level = levels[currentLevel - 1];
+        if (level.checkGameEnd) {
+             // For Simul, we aggregate.
+             // L1-3: Need 4 wins?
+             // L4: Win or Tie.
+             // L5: Tie.
+
+             let success = false;
+             let message = "";
+
+             if (currentLevel <= 3) {
+                 if (wins === 4) {
+                     success = true;
+                     message = level.checkGameEnd('X').message;
+                 } else {
+                     message = level.checkGameEnd('O').message; // Generic fail
+                 }
+             } else if (currentLevel === 4) {
+                 if (losses === 0) {
+                     success = true;
+                     message = level.checkGameEnd('X').message;
+                 } else {
+                     message = level.checkGameEnd('O').message;
+                 }
+             } else if (currentLevel === 5) {
+                 if (losses === 0 && wins === 0) { // All Ties
+                     success = true;
+                     message = level.checkGameEnd('Tie').message;
+                 } else {
+                     message = level.checkGameEnd('X').message; // Fail text
+                 }
+             }
+
+             updateJulesMessage(message);
+             if (success) {
+                 setTimeout(() => {
+                    if (currentLevel < 5) {
+                        if (confirm(message + "\n\nProceed to next level?")) {
+                            loadLevel(currentLevel + 1);
+                        }
+                    } else {
+                         alert("You are a Grandmaster! Curriculum Complete.");
+                    }
+                }, 500);
+             }
+        }
+    }
+}
+
+function getBoardStatus(boardIdx) {
+    const b = boards[boardIdx];
+    // Check win
+    if (checkWinOnBoard(b, 'X')) return 'X';
+    if (checkWinOnBoard(b, 'O')) return 'O';
+    if (isBoardFull(b)) return 'Tie';
+    return 'active';
+}
+
+function isBoardGameOver(boardIdx) {
+    return getBoardStatus(boardIdx) !== 'active';
 }
 
 function setDifficulty(diff) {
     computerDifficulty = parseInt(diff);
 }
 
-function placeRandomX() {
-  if (gameOver) return;
-  let emptySquares = getEmptySquares();
+async function placeRandomX() {
+  if (isBoardGameOver(currentBoardIndex)) return;
+  let emptySquares = [];
+  const b = boards[currentBoardIndex];
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      if (b[r][c] === '') {
+        emptySquares.push({r, c});
+      }
+    }
+  }
+  
   if (emptySquares.length > 0) {
     let move = emptySquares[Math.floor(Math.random() * emptySquares.length)];
-    placeX(move.r + 1, move.c + 1); 
+    await placeX(move.r + 1, move.c + 1);
   }
 }
 
-function placeX(row, col) {
-    if (gameOver) return;
+async function placeX(row, col) {
+    if (isBoardGameOver(currentBoardIndex)) return;
+
     row -= 1;
     col -= 1;
-    if (row >= 0 && row < 3 && col >= 0 && col < 3 && board[row][col] === '') {
-        board[row][col] = 'X';
-        playerMoved = true; // Mark that player moved
-        updateBoard();
+    const b = boards[currentBoardIndex];
 
-        const level = levels[currentLevel - 1];
+    // Check bounds
+    if (row < 0 || row >= 3 || col < 0 || col >= 3) {
+        // Invalid bounds
+        return;
+    }
 
-        // Check Move for Levels 1-3
-        // Note: Logic updated for "play to end". Success is determined by checkGameEnd,
-        // but checkMove gives immediate feedback.
-        if (currentLevel <= 3 && level.checkMove) {
-            const result = level.checkMove(row, col);
+    // Check if empty
+    if (b[row][col] !== '') {
+        // Occupied. Return silently to allow "Continue" to work (skip existing moves).
+        return;
+    }
 
-            // Only update message, do not end game on "success" unless specific condition met
-            // Current instruction implies "prove you can convert... into a WIN".
-            // So we never end game here for L1-3, unless it's a fail?
-            // Actually, if they fail the move check (e.g. played on edge in L2), we might want to warn or let them lose naturally.
-            // The feedback says "Trap detected! ... Reset and take a corner!".
-            // This implies they should restart or lose.
-            // I'll just show the message.
-            updateJulesMessage(result.message);
+    // Place X
+    b[row][col] = 'X';
+    playerMoved = true;
+    updateBoard();
 
-            // Note: Previously we ended game on success. Now we don't.
-        }
+    // Visual Delay
+    await new Promise(r => setTimeout(r, 300));
 
-        if (checkWin('X')) {
-            document.getElementById('status').innerText = 'You win!';
-            gameOver = true;
-            checkGameEnd('X');
-        } else if (isBoardFull()) {
-            document.getElementById('status').innerText = 'It\'s a draw!';
-            gameOver = true;
-            checkGameEnd('Tie');
+    // Level Check (Intermediate feedback)
+    const level = levels[currentLevel - 1];
+    if (currentLevel <= 3 && level.checkMove) {
+        const result = level.checkMove(row, col);
+        if (!result.success) {
+             // Negative feedback only? Or positive too?
+             // "Bullseye!" is technically success logic but we return false to keep playing.
+             updateJulesMessage(result.message);
         } else {
-            currentPlayer = 'O';
-            document.getElementById('status').innerText = "Computer's turn (O)";
-            setTimeout(computerMove, 500);
+             updateJulesMessage(result.message);
         }
-    } else {
-        alert('Invalid move!');
     }
 }
 
@@ -370,11 +581,12 @@ function checkGameEnd(winner) {
 function isSquareEmpty(row, col) {
     row -= 1;
     col -= 1;
-    return row >= 0 && row < 3 && col >= 0 && col < 3 && board[row][col] === '';
+    const b = boards[currentBoardIndex];
+    return row >= 0 && row < 3 && col >= 0 && col < 3 && b[row][col] === '';
 }
 
-function computerMove() {
-  if (gameOver) return;
+async function computerMove() {
+  if (isBoardGameOver(currentBoardIndex)) return;
 
   // Reset playerMoved so they must move again next turn
   playerMoved = false;
@@ -384,91 +596,33 @@ function computerMove() {
   let shouldPlayOptimally = Math.random() < optimalChance;
 
   let move = null;
+  const b = boards[currentBoardIndex];
 
-  // STRATEGY SELECTION
-  if (currentLevel <= 3) {
-      // PASSIVE AI: Intentionally plays badly to allow forks/wins
-      move = getWorstMove();
-  } else {
-      // COMPETITIVE AI: Levels 4 & 5
-      let optimalChance = (computerDifficulty - 1) * 0.25; 
-      if (Math.random() < optimalChance) {
-        move = getBestMove(); // Minimax
-      } else {
-        move = getRandomMove();
+  if (shouldPlayOptimally) {
+    move = getBestMove(b);
+  }
+
+  // Fallback to random
+  if (!move) {
+    let emptySquares = [];
+    for (let r = 0; r < 3; r++) {
+      for (let c = 0; c < 3; c++) {
+        if (b[r][c] === '') {
+          emptySquares.push({r, c});
+        }
       }
   }
 
   // Execute Move
   if (move) {
-    board[move.r][move.c] = 'O';
+    b[move.r][move.c] = 'O';
     updateBoard();
-    if (checkWin('O')) {
-      document.getElementById('status').innerText = 'Computer wins!';
-      gameOver = true;
-      checkGameEnd('O');
-    } else if (isBoardFull()) {
-      document.getElementById('status').innerText = 'It\'s a draw!';
-      gameOver = true;
-      checkGameEnd('Tie');
-    } else {
-      currentPlayer = 'X';
-      document.getElementById('status').innerText = "Your turn (X)";
-    }
+    await new Promise(r => setTimeout(r, 300));
   }
 }
 
-// --- AI HELPERS ---
-
-function getEmptySquares() {
-  let empty = [];
-  for (let r = 0; r < 3; r++) {
-    for (let c = 0; c < 3; c++) {
-      if (board[r][c] === '') empty.push({r, c});
-    }
-  }
-  return empty;
-}
-
-function getRandomMove() {
-    let empty = getEmptySquares();
-    if (empty.length > 0) return empty[Math.floor(Math.random() * empty.length)];
-    return null;
-}
-
-// PASSIVE AI (Ensures user can win/fork)
-function getWorstMove() {
-    let empty = getEmptySquares();
-    if (empty.length === 0) return null;
-
-    // Filter out moves that would BLOCK the player (we WANT the player to win)
-    let safeMoves = empty.filter(m => {
-        // Does playing here stop X from winning?
-        board[m.r][m.c] = 'X'; 
-        let blocksWin = checkWin('X');
-        board[m.r][m.c] = ''; // Undo
-        return !blocksWin;
-    });
-
-    // Filter out moves that would make Computer WIN (we don't want to win)
-    let badMoves = (safeMoves.length > 0 ? safeMoves : empty).filter(m => {
-        board[m.r][m.c] = 'O';
-        let winsGame = checkWin('O');
-        board[m.r][m.c] = '';
-        return !winsGame;
-    });
-
-    // If we have moves that don't block and don't win, pick one.
-    if (badMoves.length > 0) {
-        return badMoves[Math.floor(Math.random() * badMoves.length)];
-    }
-    
-    // Fallback: Just random
-    return empty[Math.floor(Math.random() * empty.length)];
-}
-
-// MINIMAX (Unbeatable)
-function getBestMove() {
+// NEW: Minimax Algorithm helper functions
+function getBestMove(board) {
   let bestScore = -Infinity;
   let move = null;
 
@@ -489,9 +643,9 @@ function getBestMove() {
 }
 
 function minimax(board, depth, isMaximizing) {
-  if (checkWin('O')) return 10 - depth;
-  if (checkWin('X')) return depth - 10;
-  if (isBoardFull()) return 0;
+  if (checkWinOnBoard(board, 'O')) return 10 - depth;
+  if (checkWinOnBoard(board, 'X')) return depth - 10;
+  if (isBoardFull(board)) return 0;
 
   if (isMaximizing) {
     let bestScore = -Infinity;
@@ -522,7 +676,8 @@ function minimax(board, depth, isMaximizing) {
   }
 }
 
-function checkWin(player) {
+function checkWinOnBoard(board, player) {
+    // Check rows, columns, and diagonals
     for (let i = 0; i < 3; i++) {
         if (board[i][0] === player && board[i][1] === player && board[i][2] === player) return true;
         if (board[0][i] === player && board[1][i] === player && board[2][i] === player) return true;
@@ -532,7 +687,13 @@ function checkWin(player) {
     return false;
 }
 
-function isBoardFull() {
+function checkWin(player) {
+    // Legacy support? Used by checkWin('X') calls in loop?
+    // We used checkWinOnBoard now.
+    return false;
+}
+
+function isBoardFull(board) {
     for (let r = 0; r < 3; r++) {
         for (let c = 0; c < 3; c++) {
             if (board[r][c] === '') return false;
@@ -547,10 +708,16 @@ function isSquareEmpty(row, col) {
 }
 
 function updateBoard() {
-    for (let r = 0; r < 3; r++) {
-        for (let c = 0; c < 3; c++) {
-            let cell = document.querySelector(`.cell[data-row="${r+1}"][data-col="${c+1}"]`);
-            cell.innerText = board[r][c];
+    for(let i=0; i<4; i++) {
+        const b = boards[i];
+        const boardDiv = document.getElementById(`board${i}`);
+        if (!boardDiv) continue; // Should be there
+        for (let r = 0; r < 3; r++) {
+            for (let c = 0; c < 3; c++) {
+                // Selector needs to scope to board
+                let cell = boardDiv.querySelector(`.cell[data-row="${r+1}"][data-col="${c+1}"]`);
+                cell.innerText = b[r][c];
+            }
         }
     }
 }

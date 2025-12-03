@@ -85,7 +85,7 @@ Blockly.defineBlocksWithJsonArray([
   javascript.javascriptGenerator.forBlock['place_x_at'] = function(block) {
     var row = javascript.javascriptGenerator.valueToCode(block, 'ROW', javascript.javascriptGenerator.ORDER_ATOMIC);
     var col = javascript.javascriptGenerator.valueToCode(block, 'COL', javascript.javascriptGenerator.ORDER_ATOMIC);
-    var code = 'placeX(' + row + ', ' + col + ');\n';
+    var code = 'await placeX(' + row + ', ' + col + ');\n';
     return code;
   };
 
@@ -97,7 +97,7 @@ Blockly.defineBlocksWithJsonArray([
   };
   
   javascript.javascriptGenerator.forBlock['place_x_random'] = function(block) {
-    return 'placeRandomX();\n';
+    return 'await placeRandomX();\n';
   };
 
   javascript.javascriptGenerator.forBlock['set_difficulty'] = function(block) {
