@@ -134,7 +134,6 @@ const levels = [
 ];
 
 function start() {
-    // Create main workspace.
     workspace = Blockly.inject('blocklyDiv', {
         toolbox: document.getElementById('toolbox-categories'),
     });
@@ -295,15 +294,7 @@ function setDifficulty(diff) {
 
 function placeRandomX() {
   if (gameOver) return;
-  let emptySquares = [];
-  for (let r = 0; r < 3; r++) {
-    for (let c = 0; c < 3; c++) {
-      if (board[r][c] === '') {
-        emptySquares.push({r, c});
-      }
-    }
-  }
-  
+  let emptySquares = getEmptySquares();
   if (emptySquares.length > 0) {
     let move = emptySquares[Math.floor(Math.random() * emptySquares.length)];
     placeX(move.r + 1, move.c + 1); 
@@ -403,25 +394,21 @@ function computerMove() {
 
   let move = null;
 
-  if (shouldPlayOptimally) {
-    move = getBestMove();
-  }
-
-  // Fallback to random if not playing optimally OR if optimal failed (shouldn't happen unless full)
-  if (!move) {
-    let emptySquares = [];
-    for (let r = 0; r < 3; r++) {
-      for (let c = 0; c < 3; c++) {
-        if (board[r][c] === '') {
-          emptySquares.push({r, c});
-        }
+  // STRATEGY SELECTION
+  if (currentLevel <= 3) {
+      // PASSIVE AI: Intentionally plays badly to allow forks/wins
+      move = getWorstMove();
+  } else {
+      // COMPETITIVE AI: Levels 4 & 5
+      let optimalChance = (computerDifficulty - 1) * 0.25; 
+      if (Math.random() < optimalChance) {
+        move = getBestMove(); // Minimax
+      } else {
+        move = getRandomMove();
       }
-    }
-    if (emptySquares.length > 0) {
-      move = emptySquares[Math.floor(Math.random() * emptySquares.length)];
-    }
   }
 
+  // Execute Move
   if (move) {
     board[move.r][move.c] = 'O';
     updateBoard();
@@ -440,7 +427,56 @@ function computerMove() {
   }
 }
 
-// NEW: Minimax Algorithm helper functions
+// --- AI HELPERS ---
+
+function getEmptySquares() {
+  let empty = [];
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      if (board[r][c] === '') empty.push({r, c});
+    }
+  }
+  return empty;
+}
+
+function getRandomMove() {
+    let empty = getEmptySquares();
+    if (empty.length > 0) return empty[Math.floor(Math.random() * empty.length)];
+    return null;
+}
+
+// PASSIVE AI (Ensures user can win/fork)
+function getWorstMove() {
+    let empty = getEmptySquares();
+    if (empty.length === 0) return null;
+
+    // Filter out moves that would BLOCK the player (we WANT the player to win)
+    let safeMoves = empty.filter(m => {
+        // Does playing here stop X from winning?
+        board[m.r][m.c] = 'X'; 
+        let blocksWin = checkWin('X');
+        board[m.r][m.c] = ''; // Undo
+        return !blocksWin;
+    });
+
+    // Filter out moves that would make Computer WIN (we don't want to win)
+    let badMoves = (safeMoves.length > 0 ? safeMoves : empty).filter(m => {
+        board[m.r][m.c] = 'O';
+        let winsGame = checkWin('O');
+        board[m.r][m.c] = '';
+        return !winsGame;
+    });
+
+    // If we have moves that don't block and don't win, pick one.
+    if (badMoves.length > 0) {
+        return badMoves[Math.floor(Math.random() * badMoves.length)];
+    }
+    
+    // Fallback: Just random
+    return empty[Math.floor(Math.random() * empty.length)];
+}
+
+// MINIMAX (Unbeatable)
 function getBestMove() {
   let bestScore = -Infinity;
   let move = null;
@@ -450,7 +486,7 @@ function getBestMove() {
       if (board[r][c] === '') {
         board[r][c] = 'O';
         let score = minimax(board, 0, false);
-        board[r][c] = ''; // Undo move
+        board[r][c] = ''; 
         if (score > bestScore) {
           bestScore = score;
           move = { r, c };
@@ -496,7 +532,6 @@ function minimax(board, depth, isMaximizing) {
 }
 
 function checkWin(player) {
-    // Check rows, columns, and diagonals
     for (let i = 0; i < 3; i++) {
         if (board[i][0] === player && board[i][1] === player && board[i][2] === player) return true;
         if (board[0][i] === player && board[1][i] === player && board[2][i] === player) return true;
@@ -509,12 +544,15 @@ function checkWin(player) {
 function isBoardFull() {
     for (let r = 0; r < 3; r++) {
         for (let c = 0; c < 3; c++) {
-            if (board[r][c] === '') {
-                return false;
-            }
+            if (board[r][c] === '') return false;
         }
     }
     return true;
+}
+
+function isSquareEmpty(row, col) {
+    row -= 1; col -= 1;
+    return row >= 0 && row < 3 && col >= 0 && col < 3 && board[row][col] === '';
 }
 
 function updateBoard() {
