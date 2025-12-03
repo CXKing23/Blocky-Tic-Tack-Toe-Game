@@ -13,7 +13,7 @@ let secretsUnlocked = false; // Tracks if secrets are unlocked
 const levels = [
   {
     id: 1,
-    name: "Level 1: The Edge Mistake",
+    name: "Level 1: The Center Strike",
     setup: () => {
       // Computer 'O' on side edge (row 1, col 2 -> index 0, 1)
       board[0][1] = 'O';
@@ -23,12 +23,19 @@ const levels = [
     checkMove: (row, col) => {
       // Goal: Place X at Center (2, 2 -> index 1, 1)
       if (row === 1 && col === 1) {
-        return { success: true, message: "Nice logic! They gave up the center? Punish them! Take (2,2) and watch them panic." };
+        return { success: false, message: "Bullseye! You took the center on all boards. But the game isn't over—prove you can convert this advantage into a WIN." };
       } else {
-        return { success: false, message: "You played on the edge, which let the AI create a fork! Try the center next time." };
+        return { success: false, message: "Focus! On at least one board, you ignored the open center. If the middle is free, take it!" };
       }
     },
-    teachingPoint: "The center is the most valuable real estate! If they give it up, take it.",
+    checkGameEnd: (winner) => {
+      if (winner === 'X') {
+         return { success: true, message: "Flawless victory! You dominated the center and cleaned up the rest. Your logic is solid." };
+      } else {
+         return { success: false, message: "You had the advantage, but you let it slip! You must win EVERY board to pass." };
+      }
+    },
+    teachingPoint: "Welcome to the Simul! I've rotated the board four times. In every case, they gave up the Center. If they take the edge, you punish them by seizing the middle! Write one logic to conquer all four boards.",
     hints: [
        {text: "The center is Row 2, Col 2."},
        {text: "Use 'place_x_at(2, 2)'."}
@@ -37,7 +44,7 @@ const levels = [
   },
   {
     id: 2,
-    name: "Level 2: The Center Challenge",
+    name: "Level 2: The Corner Defense",
     setup: () => {
       // Computer 'O' in Center (row 2, col 2 -> index 1, 1)
       board[1][1] = 'O';
@@ -48,12 +55,19 @@ const levels = [
       // Goal: Place X in any Corner
       // Corners: (0,0), (0,2), (2,0), (2,2)
       if ((row === 0 && col === 0) || (row === 0 && col === 2) || (row === 2 && col === 0) || (row === 2 && col === 2)) {
-        return { success: true, message: "Textbook defense! Center's gone — retreat to a corner like (1,1). Safe and sharp!" };
+        return { success: false, message: "Good defense! You secured a corner. Now, the hard part begins: Maneuver your way to a WIN." };
       } else {
-        return { success: false, message: "Don't play on the edges when the center is taken, or you'll get trapped!" };
+        return { success: false, message: "Trap detected! You played an edge piece. Against a center start, that's game over. Reset and take a corner!" };
       }
     },
-    teachingPoint: "If the center is gone, corners are your safety net. Don't play on the edges, or you'll get trapped!",
+    checkGameEnd: (winner) => {
+      if (winner === 'X') {
+         return { success: true, message: "Textbook defense! You neutralized their center advantage and turned it into a win. Impressive." };
+      } else {
+         return { success: false, message: "Close, but 'almost' doesn't compile. You need a clean sweep on all four boards." };
+      }
+    },
+    teachingPoint: "They took the Center! Don't panic. If the center is gone, the Corners are your fortress. Never play an edge against a center start, or you'll get trapped.",
     hints: [
       {text: "Corners are (1,1), (1,3), (3,1), (3,3)."},
       {text: "Use 'place_x_at(1, 1)'."}
@@ -62,7 +76,7 @@ const levels = [
   },
   {
     id: 3,
-    name: "Level 3: The Corner Trap",
+    name: "Level 3: The Trap Check",
     setup: () => {
       // Computer 'O' in a Corner (e.g., 1, 1 -> index 0, 0)
       board[0][0] = 'O';
@@ -73,12 +87,19 @@ const levels = [
       // Goal: Check if Center is empty. If it is, take it!
       // Since O is in corner, Center IS empty. So taking it is the only correct move for this lesson.
       if (row === 1 && col === 1) {
-        return { success: true, message: "You trapped them! Always check the board state before moving." };
+        return { success: false, message: "Gotcha! You caught them leaving the center open. Now, finish the job. WIN the game." };
       } else {
-        return { success: false, message: "The center was open! You should have taken it." };
+        return { success: false, message: "Missed opportunity! The center was right there. Always check the most valuable square first." };
       }
     },
-    teachingPoint: "Use an if check! If the center is free, snap it up.",
+    checkGameEnd: (winner) => {
+      if (winner === 'X') {
+         return { success: true, message: "Sharp eyes! You recognized the state of the board and adapted. That's real coding." };
+      } else {
+         return { success: false, message: "You let them off the hook. When you have the advantage, you must close out the game." };
+      }
+    },
+    teachingPoint: "Eyes open! Sometimes they start in a corner. That leaves the Center wide open. Use an if block: Check if the center is free. If it is, TAKE IT!",
     hints: [
        {text: "Check if (2,2) is empty."},
        {text: "Use 'if is_square_empty(2, 2) do place_x_at(2, 2)'."}
@@ -94,12 +115,12 @@ const levels = [
     },
     checkGameEnd: (winner) => {
       if (winner === 'X' || winner === 'Tie') {
-         return { success: true, message: "Training wheels off! You survived against the Thinking Machine." };
+         return { success: true, message: "Solid as a rock! You survived the onslaught on all four fronts. You're ready for the final test." };
       } else {
-         return { success: false, message: "The machine beat you. Try to prioritize winning, then blocking." };
+         return { success: false, message: "Shields down! You survived on some boards, but the AI broke through on one. Your defense must be universal." };
       }
     },
-    teachingPoint: "Win first. If not, block like your life depends on it.",
+    teachingPoint: "Training wheels are off. The AI is smarter now. You might not win every time, but you cannot lose. Block their winning moves. Force a Tie or steal a Win.",
     hints: [
       {text: "Check for a winning move using 'checkWin' logic (manual checks)."},
       {text: "If no win, check if opponent has a winning move and block it."},
@@ -116,14 +137,14 @@ const levels = [
     },
     checkGameEnd: (winner) => {
       if (winner === 'Tie') {
-        return { success: true, message: "Perfection! You forced a draw against a perfect opponent. You are a Grandmaster!" };
+        return { success: true, message: "Absolute perfection. You held your ground against a perfect opponent 4 times in a row. You are a Grandmaster!" };
       } else if (winner === 'X') {
          return { success: true, message: "Impossible! You beat the Grandmaster?" };
       } else {
-         return { success: false, message: "The Grandmaster wins. Perfection punishes randomness. Loop until you find a safe, valid square." };
+         return { success: false, message: "The Grandmaster found a gap in your logic. One mistake is all it takes. Try again!" };
       }
     },
-    teachingPoint: "Perfect play against a perfect opponent results in a draw. Prove your code is perfect by not losing.",
+    teachingPoint: "The Grandmaster doesn't make mistakes. A win here is impossible if they play perfectly. Your goal is perfection: Force a Draw. Do not lose.",
     hints: [
       {text: "Do NOT use 'place_x_random'."},
       {text: "Use 'repeat until has player moved?' loop."},
@@ -193,29 +214,6 @@ function secretsCallback(workspace) {
     label2.setAttribute('text', "You’ll need the password.");
     xmlList.push(label2);
 
-    // Create a button block to enter password?
-    // Blockly doesn't have a standard button block.
-    // We can use a variable prompt or just ask user to call a function?
-    // Actually, we can assume the user will be prompted via interaction.
-    // Or we can just use `prompt` immediately when category is clicked?
-    // The callback is called when category is clicked/opened.
-    // So:
-    // We can't do blocking prompt easily in callback without blocking UI?
-    // But `prompt` blocks.
-    // Let's try it.
-
-    // Note: registerToolboxCategoryCallback is expected to return a list of XML elements.
-    // If we prompt here, it might happen every time they click.
-
-    // We can check a global flag.
-    // We can trigger the prompt.
-    // BUT we must return something.
-
-    // Let's rely on a "Unlock Secrets" button in the XML? No, can't add custom buttons easily.
-    // Let's just use `confirm` or `prompt` if it's locked.
-
-    // Better UX: Show a label "Click to unlock" (but how to click?).
-    // Actually, just prompt immediately.
     setTimeout(() => {
         if (!secretsUnlocked) {
              const password = prompt("Enter password to unlock secrets:");
@@ -313,28 +311,21 @@ function placeX(row, col) {
         const level = levels[currentLevel - 1];
 
         // Check Move for Levels 1-3
+        // Note: Logic updated for "play to end". Success is determined by checkGameEnd,
+        // but checkMove gives immediate feedback.
         if (currentLevel <= 3 && level.checkMove) {
             const result = level.checkMove(row, col);
-            if (result.success) {
-                document.getElementById('status').innerText = "Level Complete!";
-                updateJulesMessage(result.message);
-                gameOver = true;
-                setTimeout(() => {
-                    if (currentLevel < 5) {
-                        if (confirm(result.message + "\n\nProceed to next level?")) {
-                            loadLevel(currentLevel + 1);
-                        }
-                    } else {
-                         // Level 3 to 4 transition
-                         if (confirm(result.message + "\n\nProceed to next level?")) {
-                            loadLevel(currentLevel + 1);
-                        }
-                    }
-                }, 500);
-                return; // Stop game
-            } else {
-                 updateJulesMessage(result.message);
-            }
+
+            // Only update message, do not end game on "success" unless specific condition met
+            // Current instruction implies "prove you can convert... into a WIN".
+            // So we never end game here for L1-3, unless it's a fail?
+            // Actually, if they fail the move check (e.g. played on edge in L2), we might want to warn or let them lose naturally.
+            // The feedback says "Trap detected! ... Reset and take a corner!".
+            // This implies they should restart or lose.
+            // I'll just show the message.
+            updateJulesMessage(result.message);
+
+            // Note: Previously we ended game on success. Now we don't.
         }
 
         if (checkWin('X')) {
